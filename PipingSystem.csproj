@@ -38,17 +38,17 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="accoremgd">
-      <HintPath>..\..\..\..\..\Program Files\Autodesk\AutoCAD 2024\accoremgd.dll</HintPath>
+    <Reference Include="accoremgd, Version=24.3.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>packages\AutoCadAPI\accoremgd.dll</HintPath>
     </Reference>
-    <Reference Include="acdbmgd">
-      <HintPath>..\..\..\..\..\Program Files\Autodesk\AutoCAD 2024\acdbmgd.dll</HintPath>
+    <Reference Include="acdbmgd, Version=24.3.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>packages\AutoCadAPI\acdbmgd.dll</HintPath>
     </Reference>
-    <Reference Include="acmgd">
-      <HintPath>..\..\..\..\..\Program Files\Autodesk\AutoCAD 2024\acmgd.dll</HintPath>
-    </Reference>
-    <Reference Include="AcWindows">
-      <HintPath>..\..\..\..\..\Program Files\Autodesk\AutoCAD 2024\AcWindows.dll</HintPath>
+    <Reference Include="acmgd, Version=24.3.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>packages\AutoCadAPI\acmgd.dll</HintPath>
     </Reference>
     <Reference Include="Csv, Version=2.0.93.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\Csv.2.0.93\lib\net40\Csv.dll</HintPath>

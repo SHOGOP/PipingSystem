@@ -183,7 +183,7 @@ namespace PipingSystem
         {
             //DataBase.createLayerDB();
             //var DbData = Properties.Resources.data;
-            int temp = 0;
+
             if (!File.Exists("./data.db"))
             {
                 if (!File.Exists("../../Resources/data.db"))
@@ -316,7 +316,6 @@ namespace PipingSystem
                     }
                 }
             } while (true);
-            EndCommand();
         }
         public void Generate45Elbow(string name, double s_angle = 0)
         {
