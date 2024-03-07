@@ -270,6 +270,29 @@ namespace PipingSystem
         */
         private void Pipe_button_Click(object sender, RoutedEventArgs e)
         {
+
+            Document doc = acApplication.DocumentManager.MdiActiveDocument;
+            if(doc.CommandInProgress != "")
+            {
+                doc.CommandCancelled += new CommandEventHandler(PreCancel_WritePipe);
+                Command c = new Command();
+                c.Command_Cancel();
+            }
+            else
+            {
+                Call_WritePipe();
+            }
+
+        }
+        public void PreCancel_WritePipe(object sender, CommandEventArgs e)
+        {
+            Document doc = acApplication.DocumentManager.MdiActiveDocument;
+            Call_WritePipe();
+            doc.CommandCancelled -= new CommandEventHandler(PreCancel_WritePipe);
+        }
+
+        public void Call_WritePipe()
+        {
             var mat = MaterialBox.SelectedItem.ToString();
             var nam = Size1Box.SelectedItem.ToString();
             double rad;
@@ -283,10 +306,10 @@ namespace PipingSystem
                     .ToList();
                 rad = result[0].Orad;
             }
+            Document doc = acApplication.DocumentManager.MdiActiveDocument;
             Command c = new Command();
             c.WritePipe(mat, rad);
         }
-
         private void Elbow_button_Click(object sender, RoutedEventArgs e)
         {
             string material = MaterialBox.SelectedItem.ToString();
@@ -319,5 +342,6 @@ namespace PipingSystem
             c.Command_Cancel();
             c.WriteBlocks(DBData, new Point3d(0, 0, 0), material);
         }
+
     }
 }

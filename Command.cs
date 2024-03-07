@@ -169,10 +169,11 @@ namespace PipingSystem
             //作業ウィンドウをアクティブ
             acApplication.MainWindow.Focus();
             Document doc = acApplication.DocumentManager.MdiActiveDocument;
-            doc.SendStringToExecute("\x03\x03", false, true, false);
+            doc.SendStringToExecute("\x03", false, true, false);
             //Editor ed = acApplication.DocumentManager.MdiActiveDocument.Editor;
             //ed.Command("\x03\x03");
         }
+
         public static void RegistInsertBlock(string blkName, string layer)
         {
             Insert_blk = blkName;
