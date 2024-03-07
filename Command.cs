@@ -12,8 +12,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Input;
+using System.Windows.Forms;
 using LiteDB;
 using acObjectId = Autodesk.AutoCAD.DatabaseServices.ObjectId;
+using acApplication = Autodesk.AutoCAD.ApplicationServices.Application;
+using OpenFileDialog = Autodesk.AutoCAD.Windows.OpenFileDialog;
 
 
 
@@ -44,17 +47,17 @@ namespace PipingSystem
 
         public static void InitCommand()
         {
-            Shortcut_menu = System.Convert.ToInt32(Application.GetSystemVariable("SHORTCUTMENU"));
-            Application.SetSystemVariable("SHORTCUTMENU", 16);
+            Shortcut_menu = System.Convert.ToInt32(acApplication.GetSystemVariable("SHORTCUTMENU"));
+            acApplication.SetSystemVariable("SHORTCUTMENU", 16);
         }
         public static void EndCommand()
         {
-            Application.SetSystemVariable("SHORTCUTMENU", Shortcut_menu);
+            acApplication.SetSystemVariable("SHORTCUTMENU", Shortcut_menu);
         }
         public static void CreateLayer(string LayerName)
         {
             // Get the current document and database
-            Document acDoc = Application.DocumentManager.MdiActiveDocument;
+            Document acDoc = acApplication.DocumentManager.MdiActiveDocument;
             Database acCurDb = acDoc.Database;
             int LineColor;
             string LineTypName ;
@@ -126,7 +129,7 @@ namespace PipingSystem
         public static void CreateDefpoints()
         {
             // Get the current document and database
-            Document acDoc = Application.DocumentManager.MdiActiveDocument;
+            Document acDoc = acApplication.DocumentManager.MdiActiveDocument;
             Database acCurDb = acDoc.Database;
             string LayerName = "Defpoints";
             using (DocumentLock docLock = acDoc.LockDocument())
@@ -164,10 +167,10 @@ namespace PipingSystem
         public void Command_Cancel()
         {
             //作業ウィンドウをアクティブ
-            Application.MainWindow.Focus();
-            Document doc = Application.DocumentManager.MdiActiveDocument;
+            acApplication.MainWindow.Focus();
+            Document doc = acApplication.DocumentManager.MdiActiveDocument;
             doc.SendStringToExecute("\x03\x03", false, true, false);
-            //Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
+            //Editor ed = acApplication.DocumentManager.MdiActiveDocument.Editor;
             //ed.Command("\x03\x03");
         }
         public static void RegistInsertBlock(string blkName, string layer)
@@ -179,25 +182,54 @@ namespace PipingSystem
         public static void Piping_System()
         {
             //DataBase.createLayerDB();
+            //var DbData = Properties.Resources.data;
+            int temp = 0;
+            if (!File.Exists("./data.db"))
+            {
+                if (!File.Exists("../../Resources/data.db"))
+                {
+                    OpenFileDialog ofd = new OpenFileDialog("data.dbを選択", "",
+                                    "db; *",
+                                    "data.dbを選択",
+                                    OpenFileDialog.OpenFileDialogFlags.DefaultIsFolder |
+                                    OpenFileDialog.OpenFileDialogFlags.ForceDefaultFolder // .AllowMultiple
+                                  );
+                    DialogResult sdResult = ofd.ShowDialog();
+                    if(sdResult== DialogResult.OK)
+                    {
+                        File.Copy(ofd.Filename, "./data.db", true);
+                    }
+                    else
+                    {
+
+                        return;
+                    }
+                    
+                }
+                else
+                {
+                    File.Copy("../../Resources/data.db", "./data.db", true);
+                }
+            }
             MainUI w = new MainUI();
-            
-            //JsonAccess test = new JsonAccess();
-            //DataBase.createPipeDB();
-            //DataBase.createElbowDB();
-            //test.Main(new string[] { "test"});
-            //Debug.WriteLine("test");
-        }
+
+                //JsonAccess test = new JsonAccess();
+                //DataBase.createPipeDB();
+                //DataBase.createElbowDB();
+                //test.Main(new string[] { "test"});
+                //Debug.WriteLine("test");
+            }
         //[CommandMethod("WritePipe")]
         public void WritePipe(string material ,double rad)
         {
             //作業ウィンドウをアクティブ
-            Application.MainWindow.Focus();
+            acApplication.MainWindow.Focus();
 
             InitCommand();
             CreateLayer(material);
             CreateLayer("CEN");
             //ドキュメント、データベースオブジェクトの作成
-            Document now_doc = Application.DocumentManager.MdiActiveDocument;
+            Document now_doc = acApplication.DocumentManager.MdiActiveDocument;
             Database db = now_doc.Database;
 
             do {
@@ -302,7 +334,7 @@ namespace PipingSystem
             CreateLayer(elb.Material);
             CreateLayer("CEN");
 
-            Document now_doc = Application.DocumentManager.MdiActiveDocument;
+            Document now_doc = acApplication.DocumentManager.MdiActiveDocument;
             Database db = now_doc.Database;
             Point3d origin = new Point3d(0, 0, 0);
 
@@ -949,7 +981,7 @@ namespace PipingSystem
             }
             CreateLayer(elb.Material);
             CreateLayer("CEN");
-            Document now_doc = Application.DocumentManager.MdiActiveDocument;
+            Document now_doc = acApplication.DocumentManager.MdiActiveDocument;
             Database db = now_doc.Database;
             Point3d origin = new Point3d(0, 0, 0);
 
@@ -2057,7 +2089,7 @@ namespace PipingSystem
         public void WriteBlocks(Parts DBData, Point3d pt,string layer,int rep = -1)
         {
             //作業ウィンドウをアクティブ
-            Application.MainWindow.Focus();
+            acApplication.MainWindow.Focus();
             InitCommand();
             CParts = DBData;
             string blkName = DBData.BName;
@@ -2084,7 +2116,7 @@ namespace PipingSystem
             else
             {
                 //ドキュメント、データベースオブジェクトの作成
-                Document now_doc = Application.DocumentManager.MdiActiveDocument;
+                Document now_doc = acApplication.DocumentManager.MdiActiveDocument;
                 Database db = now_doc.Database;
                 //ミラーフラグを初期化
                 Mirror_FLG = false;
@@ -2111,9 +2143,9 @@ namespace PipingSystem
         async public  void InsertBlocks()
         {
             //作業ウィンドウをアクティブ
-            Application.MainWindow.Focus();
+            acApplication.MainWindow.Focus();
 
-            var doc = Application.DocumentManager.MdiActiveDocument;
+            var doc = acApplication.DocumentManager.MdiActiveDocument;
             var ed = doc.Editor;
 
             //await ed.CommandAsync("_.INSERT", "SUS_100A_90_LONG_H", Editor.PauseToken, 1, 1, 0);
@@ -2153,7 +2185,7 @@ namespace PipingSystem
 
         public void ChangeLayer(acObjectId objID,string layer)
         {
-            Document now_doc = Application.DocumentManager.MdiActiveDocument;
+            Document now_doc = acApplication.DocumentManager.MdiActiveDocument;
             Database db = now_doc.Database;
             //ドキュメントのロックを解除
             using (DocumentLock docLock = now_doc.LockDocument())
@@ -2168,7 +2200,7 @@ namespace PipingSystem
         }
         public void EraseObject(acObjectId objID)
         {
-            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Document doc = acApplication.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
             //ドキュメントのロックを解除
             using (DocumentLock docLock = doc.LockDocument())
@@ -2184,7 +2216,7 @@ namespace PipingSystem
         }
         public void RotateRefBlock(acObjectId objID,double angle)
         {
-            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Document doc = acApplication.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
             //ドキュメントのロックを解除
             using (DocumentLock docLock = doc.LockDocument())
@@ -2200,7 +2232,7 @@ namespace PipingSystem
         public void ScaleRefBlock(acObjectId objID, double x=1, double y = 1, double z = 1)
         {
             Scale3d cs = new Scale3d(x, y, z);
-            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Document doc = acApplication.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
             //ドキュメントのロックを解除
             using (DocumentLock docLock = doc.LockDocument())
@@ -2215,14 +2247,14 @@ namespace PipingSystem
         }
         private void ChangeRotate(bool eve = false,int rep = 0)
         {
-            Document doc = Application.DocumentManager.MdiActiveDocument;
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
+            Document doc = acApplication.DocumentManager.MdiActiveDocument;
+            Editor ed = acApplication.DocumentManager.MdiActiveDocument.Editor;
             Database db = doc.Database;
 
             //ユーザー入力の結果を代入するポイントの作成
             PromptPointResult pt_res;
             PromptPointOptions pt_option = new PromptPointOptions("");
-            //Point3d lastpoint = (Point3d)Application.GetSystemVariable("LASTPOINT");
+            //Point3d lastpoint = (Point3d)acApplication.GetSystemVariable("LASTPOINT");
             Point3d lastpoint = Last_Point;
 
             //if (eve) doc.CommandEnded -= new CommandEventHandler(EndRotateHandler);
@@ -2305,16 +2337,16 @@ namespace PipingSystem
         }
         public static void RotateChangeSet()
         {
-            var doc = Application.DocumentManager.MdiActiveDocument;
+            var doc = acApplication.DocumentManager.MdiActiveDocument;
             if (doc == null)
                 return;
 
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
+            Editor ed = acApplication.DocumentManager.MdiActiveDocument.Editor;
             ed.PointMonitor += new PointMonitorEventHandler(RotateChangeHandler);
         }
         public static void RotateChangeHandler(object sender, PointMonitorEventArgs e)
         {
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
+            Editor ed = acApplication.DocumentManager.MdiActiveDocument.Editor;
 
             if (e.Context.History == PointHistoryBits.LastPoint)
                 return;
@@ -2336,10 +2368,10 @@ namespace PipingSystem
         }
         public static void RotateChange(Point3d target)
         {
-            Document now_doc = Application.DocumentManager.MdiActiveDocument;
+            Document now_doc = acApplication.DocumentManager.MdiActiveDocument;
             Database db = now_doc.Database;
 
-            Point3d lastpoint = (Point3d)Application.GetSystemVariable("LASTPOINT");
+            Point3d lastpoint = (Point3d)acApplication.GetSystemVariable("LASTPOINT");
             Point2d lp = new Point2d(lastpoint[0], lastpoint[1]);
             Point2d tp = new Point2d(target[0], target[1]);
             //ドキュメントのロックを解除
@@ -2359,8 +2391,8 @@ namespace PipingSystem
         async public static  void lastMove()
         {
             //作業ウィンドウをアクティブ
-            Application.MainWindow.Focus();
-            var doc = Application.DocumentManager.MdiActiveDocument;
+            acApplication.MainWindow.Focus();
+            var doc = acApplication.DocumentManager.MdiActiveDocument;
             var ed = doc.Editor;
 
             try
@@ -2377,10 +2409,10 @@ namespace PipingSystem
             //Command cmd = new Command();
             //cmd.InsertElbow(material, name, angle, type);
             //作業ウィンドウをアクティブ
-            Application.MainWindow.Focus();
+            acApplication.MainWindow.Focus();
 
             //ドキュメント、データベースオブジェクトの作成
-            Document now_doc = Application.DocumentManager.MdiActiveDocument;
+            Document now_doc = acApplication.DocumentManager.MdiActiveDocument;
             Database db = now_doc.Database;
 
             //ユーザー入力の結果を代入するポイントの作成
@@ -2397,8 +2429,8 @@ namespace PipingSystem
         {
             // Get the current database and start a transaction
             Database acCurDb;
-            acCurDb = Application.DocumentManager.MdiActiveDocument.Database;
-            Document doc = Application.DocumentManager.MdiActiveDocument;
+            acCurDb = acApplication.DocumentManager.MdiActiveDocument.Database;
+            Document doc = acApplication.DocumentManager.MdiActiveDocument;
             //ドキュメントのロックを解除
             using (DocumentLock docLock = doc.LockDocument())
             {
@@ -2469,26 +2501,26 @@ namespace PipingSystem
         
         public static void SetMoveObj()
         {
-            var doc = Application.DocumentManager.MdiActiveDocument;
+            var doc = acApplication.DocumentManager.MdiActiveDocument;
             if (doc == null)
                 return;
 
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
+            Editor ed = acApplication.DocumentManager.MdiActiveDocument.Editor;
             ed.PointMonitor += new PointMonitorEventHandler(Block_PointHandler);
         }
         [CommandMethod("RemoveMoveObj")]
         public static void RemoveMoveObj()
         {
-            var doc = Application.DocumentManager.MdiActiveDocument;
+            var doc = acApplication.DocumentManager.MdiActiveDocument;
             if (doc == null)
                 return;
 
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
+            Editor ed = acApplication.DocumentManager.MdiActiveDocument.Editor;
             ed.PointMonitor -= Block_PointHandler;
         }
         public static void Block_PointHandler(object sender, PointMonitorEventArgs e)
         {
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
+            Editor ed = acApplication.DocumentManager.MdiActiveDocument.Editor;
 
             if (e.Context.History == PointHistoryBits.LastPoint)
                 return;
@@ -2510,7 +2542,7 @@ namespace PipingSystem
         }
         public static void moveObj(Point3d target)
         {
-            Document now_doc = Application.DocumentManager.MdiActiveDocument;
+            Document now_doc = acApplication.DocumentManager.MdiActiveDocument;
             Database db = now_doc.Database;
             //ドキュメントのロックを解除
             using (DocumentLock docLock = now_doc.LockDocument())
@@ -2527,29 +2559,29 @@ namespace PipingSystem
         [CommandMethod("CurMon")]
         public void CursorMonitor()
         {
-            var doc = Application.DocumentManager.MdiActiveDocument;
+            var doc = acApplication.DocumentManager.MdiActiveDocument;
             if (doc == null)
                 return;
 
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
+            Editor ed = acApplication.DocumentManager.MdiActiveDocument.Editor;
             ed.PointMonitor += new PointMonitorEventHandler(PointHandler);
         }
 
         [CommandMethod("RemCurMon")]
         public void RemoveCursorMonitor()
         {
-            var doc = Application.DocumentManager.MdiActiveDocument;
+            var doc = acApplication.DocumentManager.MdiActiveDocument;
             if (doc == null)
                 return;
 
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
+            Editor ed = acApplication.DocumentManager.MdiActiveDocument.Editor;
             ed.PointMonitor -= PointHandler;
             ed.PointMonitor -= new PointMonitorEventHandler(RotateChangeHandler);
         }
 
         public void PointHandler(object sender, PointMonitorEventArgs e)
         {
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
+            Editor ed = acApplication.DocumentManager.MdiActiveDocument.Editor;
             if (e.Context.History == PointHistoryBits.LastPoint)
                 return;
 
@@ -2570,11 +2602,11 @@ namespace PipingSystem
         }
         public static void EndRotateSet()
         {
-            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Document doc = acApplication.DocumentManager.MdiActiveDocument;
             if (doc == null)
                 return;
 
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
+            Editor ed = acApplication.DocumentManager.MdiActiveDocument.Editor;
             doc.CommandEnded += new CommandEventHandler(EndRotateHandler);
         }
         public static void EndRotateHandler(object sender, CommandEventArgs e)
@@ -2592,7 +2624,7 @@ namespace PipingSystem
         [CommandMethod("MyCommand")]
         public void MyCommand()
         {
-            Database oDb = HostApplicationServices.WorkingDatabase;
+            Database oDb = HostacApplicationServices.WorkingDatabase;
             using (Transaction oTr = oDb.TransactionManager.StartTransaction())
             {
                 try
@@ -2643,7 +2675,7 @@ namespace PipingSystem
 
             var doc =
 
-                Application.DocumentManager.MdiActiveDocument;
+                acApplication.DocumentManager.MdiActiveDocument;
 
             var ed = doc.Editor;
 
@@ -2671,7 +2703,7 @@ namespace PipingSystem
 
             var doc =
 
-                Application.DocumentManager.MdiActiveDocument;
+                acApplication.DocumentManager.MdiActiveDocument;
 
             var ed = doc.Editor;
 
@@ -2722,7 +2754,7 @@ namespace PipingSystem
 
                 // see what commands are active
 
-                string cmdNames = (string)Autodesk.AutoCAD.ApplicationServices.Application.GetSystemVariable("CMDNAMES");
+                string cmdNames = (string)Autodesk.AutoCAD.acApplicationServices.acApplication.GetSystemVariable("CMDNAMES");
 
                 // if the INSERT command is active
 
