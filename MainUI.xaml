@@ -14,5 +14,6 @@
         <Button x:Name="_90EL_S_button" Content="90EL(S)" HorizontalAlignment="Left" Margin="220,260,0,0" VerticalAlignment="Top" Width="132" Height="36" FontSize="20" Click="Elbow_button_Click"/>
         <Button x:Name="_45EL_L_button" Content="45EL(L)" HorizontalAlignment="Left" Margin="382,260,0,0" VerticalAlignment="Top" Width="132" Height="36" FontSize="20" Click="Elbow_button_Click"/>
         <Button x:Name="_45EL_S_button" Content="45EL(S)" HorizontalAlignment="Left" Margin="556,260,0,0" VerticalAlignment="Top" Width="132" Height="36" FontSize="20" Click="Elbow_button_Click"/>
+        
     </Grid>
 </Window>

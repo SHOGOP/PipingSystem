@@ -1894,7 +1894,6 @@ namespace PipingSystem
                                     //オフセットを作成
                                     DBObjectCollection acDbObjColl = acArc.GetOffsetCurves(dim.Orad);
 
-
                                     // Step through the new objects created
                                     foreach (Entity acEnt in acDbObjColl)
                                     {

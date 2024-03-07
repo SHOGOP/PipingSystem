@@ -19,6 +19,7 @@ namespace JsonFileIO
             // オプション設定
             var options = new JsonSerializerOptions
             {
+
                 // 日本語を変換するためのエンコード設定
                 Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
 

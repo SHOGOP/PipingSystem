@@ -18,6 +18,7 @@ namespace PipingSystem
         public const string db_dir = "./data.db";
         public DataBase()
         {
+
         }
         public static void createLiteDB()
         {
