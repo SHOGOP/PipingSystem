@@ -1,3 +1,0 @@
-windows7
-WINDOWS7-PC 
-2024”N3ŒŽ6“ú  20:59:12
