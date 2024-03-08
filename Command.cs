@@ -25,37 +25,48 @@ namespace PipingSystem
 
     public class Command
     {
-        public double Center_buf { get; set; }
-        public static acObjectId MoveObjID { get; set; }
-        public static string Insert_blk { get; set; }
-        public static string Cur_layer { get; set; }
-        public static int Shortcut_menu { get; set; }
-        public static Point3d Last_Point { get; set; }
-        public static Double Cur_Slope { get; set; }
-        public static Double Prev_Slope { get; set; }
-        public static bool Mirror_FLG { get; set; }
+        public double Center_buf { get; set; }//中心線のオフセット係数
+        public static acObjectId Cur_ObjID { get; set; }//作業用のオブジェクトID
+        public static string Insert_blk { get; set; }//Insertするブロックの名前
 
-        public static Parts CParts { get; set; }
+        public static string[] Blk_suffix { get; set; }//ブロック名の末尾
+        public static string Cur_layer { get; set; }//作業用のレイヤー
+        public static int Shortcut_menu { get; set; }//コマンド開始前の"SHORTCUMMENU"を格納
+        public static Point3d Last_Point { get; set; }//作業中の最後に指定した点を格納
+        public static Double Cur_Slope { get; set; }//作業用の傾斜角度
+        public static Double Prev_Slope { get; set; }//前回の傾斜角度
+        public static bool Mirror_FLG { get; set; }//ブロックの反転を判定
 
-        public static string[] Blk_suffix { get; set; }
+        public static Parts CParts { get; set; }//作業用のDBのデータを格納
+
+
         public Command()
         {
+            //初期値
             Center_buf = 1.25;
             Blk_suffix = new string[] {"_H","_DW","_UP","_V"};
             //Prev_Slope = 0;
 
         }
-        
-
+        /// <summary>
+        ///右クリックでEnterを発行するように"SHORTCUTMENU"を変更
+        /// <summary>
         public static void InitCommand()
         {
             Shortcut_menu = System.Convert.ToInt32(acApplication.GetSystemVariable("SHORTCUTMENU"));
             acApplication.SetSystemVariable("SHORTCUTMENU", 16);
         }
+        /// <summary>
+        ///コマンドが終わったら"SHORTCUTMENU"の値を戻す
+        /// <summary>
         public static void EndCommand()
         {
             acApplication.SetSystemVariable("SHORTCUTMENU", Shortcut_menu);
         }
+        /// <summary>
+        /// DBからレイヤー情報を読み込み作成
+        /// </summary>
+        /// <param name="LayerName">レイヤー名</param>
         public static void CreateLayer(string LayerName)
         {
             // Get the current document and database
@@ -128,6 +139,9 @@ namespace PipingSystem
                 }
             }
         }
+        /// <summary>
+        /// Defpoints画層を作成
+        /// </summary>
         public static void CreateDefpoints()
         {
             // Get the current document and database
@@ -166,6 +180,10 @@ namespace PipingSystem
                 }
             }
         }
+        /// <summary>
+        /// コマンドラインからコマンドをキャンセル
+        /// </summary>
+
         public void Command_Cancel()
         {
             //作業ウィンドウをアクティブ
@@ -176,11 +194,9 @@ namespace PipingSystem
             //ed.Command("\x03\x03");
         }
 
-        public static void RegistInsertBlock(string blkName, string layer)
-        {
-            Insert_blk = blkName;
-            Cur_layer = layer;
-        }
+        /// <summary>
+        /// MainUIを呼び出す
+        /// </summary>
         [CommandMethod("Piping_System")]
         public static void Piping_System()
         {
@@ -222,6 +238,9 @@ namespace PipingSystem
                 //test.Main(new string[] { "test"});
                 //Debug.WriteLine("test");
             }
+        /// <summary>
+        /// パイプを描画する
+        /// </summary>
         //[CommandMethod("WritePipe")]
         public void WritePipe(string material ,double rad)
         {
@@ -320,6 +339,10 @@ namespace PipingSystem
                 }
             } while (true);
         }
+        /// <summary>
+        /// 45度エルボを生成し、ブロックに登録
+        /// </summary>
+
         public void Generate45Elbow(string name, double s_angle = 0)
         {
 
@@ -985,6 +1008,10 @@ namespace PipingSystem
 
             //平面--------------------------------------------------------------------------------
         }
+        /// <summary>
+        /// 90度エルボを生成し、ブロックに登録
+        /// </summary>
+
         public void Generate90Elbow(string name ,double s_angle = 0)
         {
 
@@ -2347,7 +2374,9 @@ namespace PipingSystem
             CParts = DBData;
             string blkName = DBData.BName;
 
-            Command.RegistInsertBlock(blkName, layer);
+            //各種情報を格納
+            Insert_blk = blkName;
+            Cur_layer = layer;
 
             if (rep == Blk_suffix.Length) rep = 0;
             if (rep>=0)
@@ -2361,7 +2390,7 @@ namespace PipingSystem
                 Command.InsertingABlock(blk, pt);
                 if (Mirror_FLG)
                 {
-                    ScaleRefBlock(MoveObjID, -1);
+                    ScaleRefBlock(Cur_ObjID, -1);
                 }
                 Command c = new Command();
                 c.ChangeRotate(false,rep);
@@ -2415,7 +2444,7 @@ namespace PipingSystem
                 Autodesk.AutoCAD.DatabaseServices.ObjectId[] acObjIds = null;
                 acSSet = acSSPrompt.Value;
                 acObjIds = acSSet.GetObjectIds();
-                MoveObjID = acObjIds[0];
+                Cur_ObjID = acObjIds[0];
 
 
                 Command c = new Command();
@@ -2445,7 +2474,7 @@ namespace PipingSystem
             {
                 using (Transaction acTrans = db.TransactionManager.StartTransaction())
                 {
-                    Entity blk = (Entity)acTrans.GetObject(MoveObjID, OpenMode.ForWrite);
+                    Entity blk = (Entity)acTrans.GetObject(Cur_ObjID, OpenMode.ForWrite);
                     blk.Layer = layer;
                     acTrans.Commit();
                 }
@@ -2476,7 +2505,7 @@ namespace PipingSystem
             {
                 using (Transaction acTrans = db.TransactionManager.StartTransaction())
                 {
-                    BlockReference blk = (BlockReference)acTrans.GetObject(MoveObjID, OpenMode.ForWrite);
+                    BlockReference blk = (BlockReference)acTrans.GetObject(Cur_ObjID, OpenMode.ForWrite);
                     blk.Rotation = util.DegreeToRadian(angle);
                     acTrans.Commit();
                 }
@@ -2492,7 +2521,7 @@ namespace PipingSystem
             {
                 using (Transaction acTrans = db.TransactionManager.StartTransaction())
                 {
-                    BlockReference blk = (BlockReference)acTrans.GetObject(MoveObjID, OpenMode.ForWrite);
+                    BlockReference blk = (BlockReference)acTrans.GetObject(Cur_ObjID, OpenMode.ForWrite);
                     blk.ScaleFactors = cs;
                     acTrans.Commit();
                 }
@@ -2599,7 +2628,7 @@ namespace PipingSystem
                         else
                         {
                             ed.PointMonitor -= new PointMonitorEventHandler(RotateChangeHandler);
-                            EraseObject(MoveObjID);
+                            EraseObject(Cur_ObjID);
                             WriteBlocks(CParts, lastpoint, Cur_layer, rep);
 
                             return;
@@ -2614,13 +2643,13 @@ namespace PipingSystem
                     {
 
                         ed.PointMonitor -= new PointMonitorEventHandler(RotateChangeHandler);
-                        EraseObject(MoveObjID);
+                        EraseObject(Cur_ObjID);
                         WriteBlocks(CParts, lastpoint, Cur_layer, rep);
                         return;
                     }
 
                     ed.PointMonitor -= new PointMonitorEventHandler(RotateChangeHandler);
-                    EraseObject(MoveObjID);
+                    EraseObject(Cur_ObjID);
                     Generate90Elbow(CParts.BName, Cur_Slope);
                     WriteBlocks(CParts, lastpoint, Cur_layer, rep+1);
                     return;
@@ -2629,7 +2658,7 @@ namespace PipingSystem
                     //ミラーフラグを切り替え
                     Mirror_FLG = !Mirror_FLG;
 
-                    EraseObject(MoveObjID);
+                    EraseObject(Cur_ObjID);
                     WriteBlocks(CParts, lastpoint, Cur_layer, rep);
                     ed.PointMonitor -= new PointMonitorEventHandler(RotateChangeHandler);
                     return;
@@ -2637,12 +2666,12 @@ namespace PipingSystem
                 else if(double.TryParse(pt_res.StringResult, out i_angle))
                 {
                     ed.PointMonitor -= new PointMonitorEventHandler(RotateChangeHandler);
-                    RotateRefBlock(MoveObjID, i_angle);
+                    RotateRefBlock(Cur_ObjID, i_angle);
                 }
                 else
                 {
                     ed.PointMonitor -= new PointMonitorEventHandler(RotateChangeHandler);
-                    EraseObject(MoveObjID);
+                    EraseObject(Cur_ObjID);
                     return;
                 }
             }
@@ -2651,7 +2680,7 @@ namespace PipingSystem
             {
                 
                 ed.PointMonitor -= new PointMonitorEventHandler(RotateChangeHandler);
-                EraseObject(MoveObjID);
+                EraseObject(Cur_ObjID);
                 return;
             }
             //右クリックでループ
@@ -2660,7 +2689,7 @@ namespace PipingSystem
                 ed.PointMonitor -= new PointMonitorEventHandler(RotateChangeHandler);
                 //string blk_name = Insert_blk+ Blk_suffix[rep];
 
-                EraseObject(MoveObjID);
+                EraseObject(Cur_ObjID);
                 WriteBlocks(CParts, lastpoint, Cur_layer,rep + 1);
                 return;
                 //continue;
@@ -2713,7 +2742,7 @@ namespace PipingSystem
             {
                 using (Transaction acTrans = db.TransactionManager.StartTransaction())
                 {
-                    BlockReference blk = (BlockReference)acTrans.GetObject(MoveObjID, OpenMode.ForWrite);
+                    BlockReference blk = (BlockReference)acTrans.GetObject(Cur_ObjID, OpenMode.ForWrite);
                     blk.Rotation = lp.GetVectorTo(tp).Angle;
                     acTrans.Commit();
                 }
@@ -2825,7 +2854,7 @@ namespace PipingSystem
 
                     // Save the new object to the database
                     acTrans.Commit();
-                    MoveObjID = resId;
+                    Cur_ObjID = resId;
                     
                     // Dispose of the transaction
                 }
@@ -2883,7 +2912,7 @@ namespace PipingSystem
             {
                 using (Transaction acTrans = db.TransactionManager.StartTransaction())
                 {
-                    BlockReference blk = (BlockReference)acTrans.GetObject(MoveObjID, OpenMode.ForWrite);
+                    BlockReference blk = (BlockReference)acTrans.GetObject(Cur_ObjID, OpenMode.ForWrite);
                     blk.Position = target;
                     acTrans.Commit();
                 }
