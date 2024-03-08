@@ -275,6 +275,7 @@ namespace PipingSystem
             if(doc.CommandInProgress != "")
             {
                 doc.CommandCancelled += new CommandEventHandler(PreCancel_WritePipe);
+                
                 Command c = new Command();
                 c.Command_Cancel();
             }
