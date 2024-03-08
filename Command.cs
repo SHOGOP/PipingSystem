@@ -908,7 +908,7 @@ namespace PipingSystem
 
                             // アウトラインを描画---------------------------------------------------------
                             // X
-                            target1 = new Point3d(-cut[0], dim.Orad, 0);
+                            target1 = new Point3d(-Plen[0], dim.Orad, 0);
                             target2 = new Point3d(dim.Length, dim.Orad, 0);
                             using (Line acLine = new Line(target1,
                                                             target2))
@@ -940,6 +940,23 @@ namespace PipingSystem
 
                                 b_table_rec.AppendEntity(acLine);
                             }
+
+                            // Ellipse
+                            Point3d tp = new Point3d(-Plen[0], 0, 0);
+                            Vector3d normal = Vector3d.ZAxis;
+                            Vector3d majorAxis = dim.Orad * Vector3d.YAxis;
+                            double radiusRatio = cut[0] / dim.Orad;
+                            double startAng = 180 * Math.Atan(1.0) / 45.0;
+                            double endAng = 0;
+
+                            using (Ellipse acArc = new Ellipse(tp, normal
+                                                , majorAxis, radiusRatio, startAng, endAng))
+                            {
+                                acArc.Layer = "0";
+                                acArc.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
+
+                                b_table_rec.AppendEntity(acArc);
+                            }
                             // サイズ　テキスト
                             using (DBText acText = new DBText())
                             {
@@ -965,7 +982,7 @@ namespace PipingSystem
                 }
             }
 
-            
+
             //平面--------------------------------------------------------------------------------
         }
         public void Generate90Elbow(string name ,double s_angle = 0)
@@ -1540,6 +1557,244 @@ namespace PipingSystem
                     }
                 }
             }
+            void slope_down(Elbow dim, Double sl_angle)
+            {
+                //平面--------------------------------------------------------------------------------
+                //ドキュメントのロックを解除
+                using (DocumentLock docLock = now_doc.LockDocument())
+                {
+                    //トランザクションの開始
+                    using (Transaction fir_trans = db.TransactionManager.StartTransaction())
+                    {
+
+                        //ブロックテーブルの作成
+                        BlockTable b_table;
+                        b_table = fir_trans.GetObject(db.BlockTableId,
+                                                        OpenMode.ForRead) as BlockTable;
+                        string blkName = dim.BName + Blk_suffix[1] + Math.Abs(sl_angle).ToString();
+                        s_angle = -s_angle;
+                        if (!b_table.Has(blkName))
+                        {
+                            BlockTableRecord b_table_rec = new BlockTableRecord();
+                            //b_table_rec = fir_trans.GetObject(b_table[BlockTableRecord.ModelSpace],
+                            //OpenMode.ForWrite) as BlockTableRecord;
+
+                            b_table_rec.Name = blkName;
+                            b_table_rec.Origin = new Point3d(0, 0, 0);
+                            Command cm = new Command();
+                            double buf = cm.Center_buf;
+                            Point3d cut = util.PolarPoint(dim.Orad, 270 + sl_angle);
+                            Point3d Plen = util.PolarPoint(dim.Length, sl_angle);
+                            Point3d target1 = new Point3d(0, 0, 0);
+                            Point3d target2 = new Point3d(Plen[0] + (-cut[0] * Center_buf), 0, 0);
+                            // 中心線を描画---------------------------------------------------------
+                            // X
+                            using (Line acLine = new Line(target1,
+                                                            target2))
+                            {
+                                acLine.Layer = "CEN";
+
+                                b_table_rec.AppendEntity(acLine);
+
+                                //ブロックを定義する場合の最初のオブジェクトはこれが必要
+                                //-------------------------------------------------------------
+                                fir_trans.GetObject(db.BlockTableId, OpenMode.ForWrite);
+                                b_table.Add(b_table_rec);
+                                fir_trans.AddNewlyCreatedDBObject(b_table_rec, true);
+                                //------------------------------------------------------
+                            }
+
+                            // Y
+                            target1 = new Point3d(0, 0, 0);
+                            target2 = new Point3d(0, -dim.Length, 0);
+                            using (Line acLine = new Line(target1,
+                                    target2))
+                            {
+                                acLine.Layer = "CEN";
+                                b_table_rec.AppendEntity(acLine);
+                            }
+                            target1 = new Point3d(Plen[0], dim.Orad * Center_buf, 0);
+                            target2 = new Point3d(Plen[0], -dim.Orad * Center_buf, 0);
+                            using (Line acLine = new Line(target1,
+                                    target2))
+                            {
+                                acLine.Layer = "CEN";
+                                b_table_rec.AppendEntity(acLine);
+                            }
+                            // R
+                            Point3d tp = new Point3d(Plen[0], -dim.Length, 0);
+                            Vector3d normal = Vector3d.ZAxis;
+                            Vector3d majorAxis = dim.Length * Vector3d.YAxis;
+                            double radiusRatio = Plen[0] / dim.Length;
+                            double startAng = 0;
+                            double endAng = 90 * Math.Atan(1.0) / 45.0;
+
+                            using (Ellipse acArc = new Ellipse(tp, normal
+                                    , majorAxis, radiusRatio, startAng, endAng))
+                            {
+                                //ターゲット地点が半径以下の場合
+                                if (Plen[0] <= dim.Orad)
+                                {
+                                    acArc.Layer = "0";
+                                    acArc.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
+                                    //オフセットを作成
+                                    DBObjectCollection acDbObjColl = acArc.GetOffsetCurves(dim.Orad);
+
+                                    // Step through the new objects created
+                                    foreach (Entity acEnt in acDbObjColl)
+                                    {
+                                        // Add each offset object
+                                        b_table_rec.AppendEntity(acEnt);
+                                        fir_trans.AddNewlyCreatedDBObject(acEnt, true);
+                                    }
+
+                                }
+                                acArc.Layer = "CEN";
+                                acArc.Color = Color.FromColorIndex(ColorMethod.ByLayer, 256);
+                                b_table_rec.AppendEntity(acArc);
+
+                                fir_trans.AddNewlyCreatedDBObject(acArc, true);
+                            }
+                            // Outer Ellipse
+                            tp = new Point3d(Plen[0], 0, 0);
+                            majorAxis = dim.Orad * Vector3d.YAxis;
+                            radiusRatio = cut[0] / dim.Orad;
+                            startAng = 0;
+                            endAng = 180 * Math.Atan(1.0) / 45.0;
+
+                            using (Ellipse acArc = new Ellipse(tp, normal
+                                                , majorAxis, radiusRatio, startAng, endAng))
+                            {
+                                acArc.Layer = "0";
+                                acArc.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
+
+                                b_table_rec.AppendEntity(acArc);
+
+                                //ターゲット地点が半径より大きいの場合
+                                if (Plen[0] > dim.Orad)
+                                {
+                                    tp = new Point3d(Plen[0], -dim.Length, 0);
+                                    endAng = 90 * Math.Atan(1.0) / 45.0;
+                                    //アウトライン内側
+                                    majorAxis = (dim.Length - dim.Orad) * Vector3d.YAxis;
+                                    radiusRatio = (Plen[0] - dim.Orad) / (dim.Length - dim.Orad);
+                                    using (Ellipse acArc2 = new Ellipse(tp, normal
+                                            , majorAxis, radiusRatio, startAng, endAng))
+                                    {
+                                        acArc2.Layer = "0";
+                                        acArc2.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
+
+                                        b_table_rec.AppendEntity(acArc2);
+
+                                        fir_trans.AddNewlyCreatedDBObject(acArc2, true);
+                                    }
+                                    //アウトライン外側
+                                    majorAxis = (dim.Length + dim.Orad) * Vector3d.YAxis;
+                                    radiusRatio = (Plen[0] + dim.Orad) / (dim.Length + dim.Orad);
+                                    using (Ellipse acArc2 = new Ellipse(tp, normal
+                                            , majorAxis, radiusRatio, startAng, endAng))
+                                    {
+                                        acArc2.Layer = "0";
+                                        acArc2.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
+
+                                        b_table_rec.AppendEntity(acArc2);
+
+                                        fir_trans.AddNewlyCreatedDBObject(acArc2, true);
+                                    }
+                                }
+                                else
+                                {
+                                    target1 = new Point3d(dim.Orad, -dim.Length, 0);
+                                    target2 = new Point3d(dim.Orad, 0, 0);
+                                    using (Line acLine = new Line(target1,
+                                            target2))
+                                    {
+                                        Point3dCollection intersectPoints = new Point3dCollection();
+                                        acLine.IntersectWith(acArc, Intersect.OnBothOperands, intersectPoints,
+                                            IntPtr.Zero, IntPtr.Zero);
+                                        acLine.EndPoint = intersectPoints[0];
+                                        acLine.Layer = "0";
+                                        acLine.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
+                                        Vector3d vec = tp.GetVectorTo(intersectPoints[0]);
+                                        double m_angle = tp.GetAsVector().GetAngleTo(vec);
+                                        acArc.EndAngle = util.DegreeToRadian(90) + m_angle;
+                                        b_table_rec.AppendEntity(acLine);
+                                    }
+                                }
+                            }
+
+                            // EndCap
+                            target1 = new Point3d(-dim.Orad, -dim.Length, 0);
+                            target2 = new Point3d(dim.Orad, -dim.Length, 0);
+                            using (Line acLine = new Line(target1,
+                                                            target2))
+                            {
+                                acLine.Layer = "0";
+                                acLine.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
+
+                                b_table_rec.AppendEntity(acLine);
+                            }
+
+
+
+                            // サイズ　テキスト
+                            using (DBText acText = new DBText())
+                            {
+                                CreateDefpoints();
+                                acText.TextString = dim.Name;
+                                //acText.HorizontalMode = TextHorizontalMode.TextCenter;
+                                //acText.VerticalMode = TextVerticalMode.TextBottom;
+                                acText.Height = dim.Orad / 4;
+                                //acText.Rotation = util.DegreeToRadian(90);
+                                acText.Position = new Point3d(acText.Height / 2, -dim.Length + acText.Height / 4, 0);
+                                acText.Layer = "Defpoints";
+                                acText.ColorIndex = 5;
+
+
+                                b_table_rec.AppendEntity(acText);
+                                fir_trans.AddNewlyCreatedDBObject(acText, true);
+                            }
+                            // HORテキスト
+                            using (DBText acText = new DBText())
+                            {
+                                CreateDefpoints();
+                                acText.TextString = "HOR.";
+                                //acText.HorizontalMode = TextHorizontalMode.TextCenter;
+                                //acText.VerticalMode = TextVerticalMode.TextBottom;
+                                acText.Height = dim.Orad / 6;
+                                //acText.Rotation = util.DegreeToRadian(90);
+                                acText.Position = new Point3d(acText.Height / 2 - dim.Orad, -dim.Length + acText.Height / 4 + (acText.Height * 1.25), 0);
+                                acText.Layer = "Defpoints";
+                                acText.ColorIndex = 5;
+
+
+                                b_table_rec.AppendEntity(acText);
+                                fir_trans.AddNewlyCreatedDBObject(acText, true);
+                            }
+                            // HORテキスト
+                            using (DBText acText = new DBText())
+                            {
+                                CreateDefpoints();
+                                acText.TextString = Math.Abs(sl_angle).ToString();
+                                //acText.HorizontalMode = TextHorizontalMode.TextCenter;
+                                //acText.VerticalMode = TextVerticalMode.TextBottom;
+                                acText.Height = dim.Orad / 6;
+                                //acText.Rotation = util.DegreeToRadian(90);
+                                acText.Position = new Point3d(acText.Height / 2 - dim.Orad, -dim.Length + acText.Height / 4, 0);
+                                acText.Layer = "Defpoints";
+                                acText.ColorIndex = 5;
+
+
+                                b_table_rec.AppendEntity(acText);
+                                fir_trans.AddNewlyCreatedDBObject(acText, true);
+                            }
+
+                        }
+                        //トランザクション終了
+                        fir_trans.Commit();
+                    }
+                }
+            }
             void slope_up(Elbow dim,Double sl_angle)
             {
                 //平面--------------------------------------------------------------------------------
@@ -1554,7 +1809,7 @@ namespace PipingSystem
                         BlockTable b_table;
                         b_table = fir_trans.GetObject(db.BlockTableId,
                                                         OpenMode.ForRead) as BlockTable;
-                        string blkName = dim.BName + Blk_suffix[1]+ Math.Abs(sl_angle).ToString();
+                        string blkName = dim.BName + Blk_suffix[2]+ Math.Abs(sl_angle).ToString();
                         if (!b_table.Has(blkName))
                         {
                             BlockTableRecord b_table_rec = new BlockTableRecord();
@@ -1834,244 +2089,6 @@ namespace PipingSystem
                                 acPoly.Erase();
                                 acPoly2.Erase();
                             }
-                        }
-                        //トランザクション終了
-                        fir_trans.Commit();
-                    }
-                }
-            }
-            void slope_down(Elbow dim, Double sl_angle)
-            {
-                //平面--------------------------------------------------------------------------------
-                //ドキュメントのロックを解除
-                using (DocumentLock docLock = now_doc.LockDocument())
-                {
-                    //トランザクションの開始
-                    using (Transaction fir_trans = db.TransactionManager.StartTransaction())
-                    {
-
-                        //ブロックテーブルの作成
-                        BlockTable b_table;
-                        b_table = fir_trans.GetObject(db.BlockTableId,
-                                                        OpenMode.ForRead) as BlockTable;
-                        string blkName = dim.BName + Blk_suffix[2] + Math.Abs(sl_angle).ToString();
-                        s_angle = -s_angle;
-                        if (!b_table.Has(blkName))
-                        {
-                            BlockTableRecord b_table_rec = new BlockTableRecord();
-                            //b_table_rec = fir_trans.GetObject(b_table[BlockTableRecord.ModelSpace],
-                            //OpenMode.ForWrite) as BlockTableRecord;
-
-                            b_table_rec.Name = blkName;
-                            b_table_rec.Origin = new Point3d(0, 0, 0);
-                            Command cm = new Command();
-                            double buf = cm.Center_buf;
-                            Point3d cut = util.PolarPoint(dim.Orad, 270+sl_angle);
-                            Point3d Plen = util.PolarPoint(dim.Length, sl_angle);
-                            Point3d target1 = new Point3d(0, 0, 0);
-                            Point3d target2 = new Point3d(Plen[0] + (-cut[0] * Center_buf), 0, 0);
-                            // 中心線を描画---------------------------------------------------------
-                            // X
-                            using (Line acLine = new Line(target1,
-                                                            target2))
-                            {
-                                acLine.Layer = "CEN";
-
-                                b_table_rec.AppendEntity(acLine);
-
-                                //ブロックを定義する場合の最初のオブジェクトはこれが必要
-                                //-------------------------------------------------------------
-                                fir_trans.GetObject(db.BlockTableId, OpenMode.ForWrite);
-                                b_table.Add(b_table_rec);
-                                fir_trans.AddNewlyCreatedDBObject(b_table_rec, true);
-                                //------------------------------------------------------
-                            }
-
-                            // Y
-                            target1 = new Point3d(0, 0, 0);
-                            target2 = new Point3d(0, -dim.Length, 0);
-                            using (Line acLine = new Line(target1,
-                                    target2))
-                            {
-                                acLine.Layer = "CEN";
-                                b_table_rec.AppendEntity(acLine);
-                            }
-                            target1 = new Point3d(Plen[0], dim.Orad * Center_buf, 0);
-                            target2 = new Point3d(Plen[0], -dim.Orad * Center_buf, 0);
-                            using (Line acLine = new Line(target1,
-                                    target2))
-                            {
-                                acLine.Layer = "CEN";
-                                b_table_rec.AppendEntity(acLine);
-                            }
-                            // R
-                            Point3d tp = new Point3d(Plen[0], -dim.Length, 0);
-                            Vector3d normal = Vector3d.ZAxis;
-                            Vector3d majorAxis = dim.Length * Vector3d.YAxis;
-                            double radiusRatio = Plen[0] / dim.Length;
-                            double startAng = 0;
-                            double endAng = 90 * Math.Atan(1.0) / 45.0;
-
-                            using (Ellipse acArc = new Ellipse(tp, normal
-                                    , majorAxis, radiusRatio, startAng, endAng))
-                            {
-                                //ターゲット地点が半径以下の場合
-                                if (Plen[0] <= dim.Orad)
-                                {
-                                    acArc.Layer = "0";
-                                    acArc.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
-                                    //オフセットを作成
-                                    DBObjectCollection acDbObjColl = acArc.GetOffsetCurves(dim.Orad);
-
-                                    // Step through the new objects created
-                                    foreach (Entity acEnt in acDbObjColl)
-                                    {
-                                        // Add each offset object
-                                        b_table_rec.AppendEntity(acEnt);
-                                        fir_trans.AddNewlyCreatedDBObject(acEnt, true);
-                                    }
-
-                                }
-                                acArc.Layer = "CEN";
-                                acArc.Color = Color.FromColorIndex(ColorMethod.ByLayer, 256);
-                                b_table_rec.AppendEntity(acArc);
-
-                                fir_trans.AddNewlyCreatedDBObject(acArc, true);
-                            }
-                            // Outer Ellipse
-                            tp = new Point3d(Plen[0], 0, 0);
-                            majorAxis = dim.Orad * Vector3d.YAxis;
-                            radiusRatio = cut[0] / dim.Orad;
-                            startAng = 0;
-                            endAng = 180 * Math.Atan(1.0) / 45.0;
-
-                            using (Ellipse acArc = new Ellipse(tp, normal
-                                                , majorAxis, radiusRatio, startAng, endAng))
-                            {
-                                acArc.Layer = "0";
-                                acArc.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
-
-                                b_table_rec.AppendEntity(acArc);
-
-                                //ターゲット地点が半径より大きいの場合
-                                if (Plen[0] > dim.Orad)
-                                {
-                                    tp = new Point3d(Plen[0], -dim.Length, 0);
-                                    endAng = 90 * Math.Atan(1.0) / 45.0;
-                                    //アウトライン内側
-                                    majorAxis = (dim.Length - dim.Orad) * Vector3d.YAxis;
-                                    radiusRatio = (Plen[0] - dim.Orad) / (dim.Length - dim.Orad);
-                                    using (Ellipse acArc2 = new Ellipse(tp, normal
-                                            , majorAxis, radiusRatio, startAng, endAng))
-                                    {
-                                        acArc2.Layer = "0";
-                                        acArc2.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
-
-                                        b_table_rec.AppendEntity(acArc2);
-
-                                        fir_trans.AddNewlyCreatedDBObject(acArc2, true);
-                                    }
-                                    //アウトライン外側
-                                    majorAxis = (dim.Length + dim.Orad) * Vector3d.YAxis;
-                                    radiusRatio = (Plen[0] + dim.Orad) / (dim.Length + dim.Orad);
-                                    using (Ellipse acArc2 = new Ellipse(tp, normal
-                                            , majorAxis, radiusRatio, startAng, endAng))
-                                    {
-                                        acArc2.Layer = "0";
-                                        acArc2.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
-
-                                        b_table_rec.AppendEntity(acArc2);
-
-                                        fir_trans.AddNewlyCreatedDBObject(acArc2, true);
-                                    }
-                                }
-                                else
-                                {
-                                    target1 = new Point3d(dim.Orad, -dim.Length, 0);
-                                    target2 = new Point3d(dim.Orad, 0, 0);
-                                    using (Line acLine = new Line(target1,
-                                            target2))
-                                    {
-                                        Point3dCollection intersectPoints = new Point3dCollection();
-                                        acLine.IntersectWith(acArc, Intersect.OnBothOperands, intersectPoints,
-                                            IntPtr.Zero, IntPtr.Zero);
-                                        acLine.EndPoint = intersectPoints[0];
-                                        acLine.Layer = "0";
-                                        acLine.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
-                                        Vector3d vec = tp.GetVectorTo(intersectPoints[0]);
-                                        double m_angle = tp.GetAsVector().GetAngleTo(vec);
-                                        acArc.EndAngle = util.DegreeToRadian(90)+m_angle; 
-                                        b_table_rec.AppendEntity(acLine);
-                                    }
-                                }
-                            }
-
-                            // EndCap
-                            target1 = new Point3d(-dim.Orad, -dim.Length, 0);
-                            target2 = new Point3d(dim.Orad, -dim.Length, 0);
-                            using (Line acLine = new Line(target1,
-                                                            target2))
-                            {
-                                acLine.Layer = "0";
-                                acLine.Color = Color.FromColorIndex(ColorMethod.ByBlock, 0);
-
-                                b_table_rec.AppendEntity(acLine);
-                            }
-
-
-
-                            // サイズ　テキスト
-                            using (DBText acText = new DBText())
-                            {
-                                CreateDefpoints();
-                                acText.TextString = dim.Name;
-                                //acText.HorizontalMode = TextHorizontalMode.TextCenter;
-                                //acText.VerticalMode = TextVerticalMode.TextBottom;
-                                acText.Height = dim.Orad / 4;
-                                //acText.Rotation = util.DegreeToRadian(90);
-                                acText.Position = new Point3d(acText.Height / 2, -dim.Length + acText.Height / 4, 0);
-                                acText.Layer = "Defpoints";
-                                acText.ColorIndex = 5;
-
-
-                                b_table_rec.AppendEntity(acText);
-                                fir_trans.AddNewlyCreatedDBObject(acText, true);
-                            }
-                            // HORテキスト
-                            using (DBText acText = new DBText())
-                            {
-                                CreateDefpoints();
-                                acText.TextString = "HOR.";
-                                //acText.HorizontalMode = TextHorizontalMode.TextCenter;
-                                //acText.VerticalMode = TextVerticalMode.TextBottom;
-                                acText.Height = dim.Orad / 6;
-                                //acText.Rotation = util.DegreeToRadian(90);
-                                acText.Position = new Point3d(acText.Height / 2 - dim.Orad, -dim.Length + acText.Height / 4 + (acText.Height * 1.25), 0);
-                                acText.Layer = "Defpoints";
-                                acText.ColorIndex = 5;
-
-
-                                b_table_rec.AppendEntity(acText);
-                                fir_trans.AddNewlyCreatedDBObject(acText, true);
-                            }
-                            // HORテキスト
-                            using (DBText acText = new DBText())
-                            {
-                                CreateDefpoints();
-                                acText.TextString = Math.Abs(sl_angle).ToString();
-                                //acText.HorizontalMode = TextHorizontalMode.TextCenter;
-                                //acText.VerticalMode = TextVerticalMode.TextBottom;
-                                acText.Height = dim.Orad / 6;
-                                //acText.Rotation = util.DegreeToRadian(90);
-                                acText.Position = new Point3d(acText.Height / 2 - dim.Orad, -dim.Length + acText.Height / 4, 0);
-                                acText.Layer = "Defpoints";
-                                acText.ColorIndex = 5;
-
-
-                                b_table_rec.AppendEntity(acText);
-                                fir_trans.AddNewlyCreatedDBObject(acText, true);
-                            }
-
                         }
                         //トランザクション終了
                         fir_trans.Commit();
@@ -2531,13 +2548,18 @@ namespace PipingSystem
                         pt_option.Message = "\n平面の点を指定してください: ";
                         pt_option.BasePoint = lastpoint;
                         pt_res = doc.Editor.GetPoint(pt_option);
-                        if (pt_res.Status != PromptStatus.OK)
+                        double dist;
+                        if (double.TryParse(pt_res.StringResult, out i_angle))
+                        {
+                            dist = i_angle;
+                        }
+                        else if (pt_res.Status != PromptStatus.OK)
                         {
                             ed.PointMonitor -= new PointMonitorEventHandler(RotateChangeHandler);
                             WriteBlocks(CParts, lastpoint, Cur_layer, rep);
                             return;
                         }
-                        double dist = lastpoint.DistanceTo(pt_res.Value);
+                        dist = lastpoint.DistanceTo(pt_res.Value);
                         pt_option.Message = "\n1点目または高さを入力してください: ";
                         pt_option.UseBasePoint = false;
                         pt_res = doc.Editor.GetPoint(pt_option);
